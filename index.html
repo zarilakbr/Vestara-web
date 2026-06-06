@@ -6,8 +6,8 @@
     <title>Vestara - Premium Stock Analyzer</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
-    <link rel="stylesheet" href="style.css">
-    <link rel="icon" href="logo.png" type="image/png">
+    <link rel="stylesheet" href="style.css?v=26">
+    <link rel="icon" href="logo.png?v=26" type="image/png">
 </head>
 <body>
     <!-- Login Overlay -->
@@ -89,7 +89,7 @@
                         <span id="clock-wib" style="font-weight: 500; letter-spacing: 1px;">00:00:00 WIB</span>
                         <span id="market-badge" style="margin-left: 8px; padding: 4px 8px; font-size: 10px; border-radius: 4px; font-weight: bold; transition: all 0.3s;">TUTUP</span>
                     </div>
-                    <div class="market-status">
+                    <div class="market-status" onclick="updateTradingView('IHSG')" style="cursor: pointer;" title="Klik untuk lihat Chart IHSG">
                         <span class="status-dot"></span>
                         <span>IHSG: <strong id="ihsg-value">Memuat...</strong> <span id="ihsg-change" style="font-size: 12px; margin-left: 4px; font-weight: bold;"></span></span>
                     </div>
@@ -112,6 +112,7 @@
                                     <span style="color: var(--text-muted);">dari hari sebelumnya</span>
                                 </p>
                             </div>
+                        </div>
                     </div>
                     
                     <div class="command-center-grid" style="display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 24px;">
@@ -196,8 +197,8 @@
                             <h3>Masukkan Data Keuangan</h3>
                             
                             <div class="form-group inline" style="margin-bottom: 16px;">
-                                <input type="text" id="val-ticker" placeholder="Tarik harga otomatis (ex: BBCA)" style="width: 70%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-dark); color: white;">
-                                <button class="btn-primary" id="btn-fetch-price" style="width: 30%; padding: 12px;">Cari Harga</button>
+                                <input type="text" id="val-ticker" placeholder="Tarik harga otomatis (ex: BBCA)" style="flex: 1; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-dark); color: white;">
+                                <button class="btn-primary" id="btn-fetch-price" style="flex: 0 0 auto; padding: 12px;">Cari Harga</button>
                             </div>
                             
                             <div class="form-group">
@@ -251,8 +252,8 @@
                         <div class="card selector-card">
                             <h3 style="margin-bottom: 16px;">Cari Saham untuk Dianalisis</h3>
                             <div class="form-group inline" style="margin-bottom: 0;">
-                                <input type="text" id="pred-ticker" placeholder="Ketik nama atau kode saham (ex: BBCA)" style="width: 70%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-dark); color: white;">
-                                <button class="btn-primary" id="btn-predict" style="width: 30%; padding: 12px;">Analisis Otomatis</button>
+                                <input type="text" id="pred-ticker" placeholder="Ketik nama atau kode saham (ex: BBCA)" style="flex: 1; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-dark); color: white;">
+                                <button class="btn-primary" id="btn-predict" style="flex: 0 0 auto; padding: 12px;">Analisis Otomatis</button>
                             </div>
                         </div>
                         
@@ -292,13 +293,23 @@
         </main>
     </div>
 
+    <!-- Mobile Chart Modal -->
+    <div id="mobile-chart-modal" style="display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 100000; flex-direction: column;">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 16px; border-bottom: 1px solid var(--border); background: var(--bg-panel);">
+            <h3 id="mobile-chart-title" style="margin: 0; font-size: 18px; color: var(--text-main);">Chart</h3>
+            <button onclick="document.getElementById('mobile-chart-modal').style.display='none'" style="background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex;"><span class="material-symbols-outlined">close</span></button>
+        </div>
+        <div id="mobile-tv-chart-container" style="flex: 1; width: 100%; position: relative;"></div>
+    </div>
+
     <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
     
     <!-- Toast Popup Container -->
     <div id="toast-container"></div>
 
-    <script src="app.js"></script>
+    <script src="app.js?v=26"></script>
 </body>
 </html>

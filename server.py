@@ -57,9 +57,13 @@ screener_cache = {
 # Removed simulated FUNDAMENTALS for production readiness
 
 def scrape_yahoo_price(ticker):
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'application/json, text/plain, */*',
+        'Referer': 'https://finance.yahoo.com/'
+    }
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker}?interval=1d&range=1d"
-        headers = {'User-Agent': 'Mozilla/5.0'}
         res = requests.get(url, headers=headers, timeout=5)
         if res.status_code == 200:
             data = res.json()
@@ -76,6 +80,24 @@ def scrape_yahoo_price(ticker):
             return current_price, round(change, 2), volume, name
     except Exception:
         pass
+
+    # Fallback to Google Finance jika Yahoo Finance memblokir Vercel
+    try:
+        ticker_base = ticker.replace('.JK', '')
+        url = f"https://www.google.com/finance/quote/{ticker_base}:IDX"
+        res = requests.get(url, headers=headers, timeout=5)
+        if res.status_code == 200:
+            soup = BeautifulSoup(res.text, 'html.parser')
+            price_div = soup.find('div', class_='YMlKec fxKbKc')
+            if price_div:
+                price_str = price_div.text.replace('Rp', '').replace(',', '').strip()
+                price = float(price_str)
+                name_div = soup.find('div', class_='zzDege')
+                name = name_div.text if name_div else ticker_base
+                return price, 0.0, 0, name
+    except Exception:
+        pass
+
     return None, None, None, ticker.replace('.JK', '')
 
 @app.route('/api/screener', methods=['GET'])
@@ -154,7 +176,11 @@ def get_technical():
         
     try:
         url = f"https://query1.finance.yahoo.com/v8/finance/chart/{ticker_symbol}?interval=1d&range=3mo"
-        headers = {'User-Agent': 'Mozilla/5.0'}
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept': 'application/json, text/plain, */*',
+            'Referer': 'https://finance.yahoo.com/'
+        }
         res = requests.get(url, headers=headers, timeout=5)
         if res.status_code != 200:
             raise Exception("Gagal menarik data dari bursa")
@@ -248,32 +274,26 @@ def get_ihsg():
 
 @app.route('/api/search', methods=['GET'])
 def search_stock():
-    q = request.args.get('q', '').strip()
-    if not q:
+    q = request.args.get('q', '').strip().upper()
+    if len(q) < 2:
         return jsonify([])
-        
+    
     try:
-        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={q}&quotesCount=6&newsCount=0"
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        res = requests.get(url, headers=headers, timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            quotes = data.get('quotes', [])
+        results = []
+        for stock in STOCKS_DB:
+            ticker_no_jk = stock['ticker'].replace('.JK', '')
+            if q in ticker_no_jk or q in stock['sector'].upper():
+                results.append({
+                    'ticker': ticker_no_jk,
+                    'name': stock['sector'] + ' Sector',
+                    'exchange': 'IDX'
+                })
+        
+        # Jika hasil lokal kurang, kita bisa fallback ke hardcoded populer
+        if not results and q == 'GOTO':
+            results.append({'ticker': 'GOTO', 'name': 'GoTo Gojek Tokopedia', 'exchange': 'IDX'})
             
-            results = []
-            for item in quotes:
-                if item.get('quoteType') in ['EQUITY', 'ETF']:
-                    ticker = item.get('symbol', '')
-                    name = item.get('longname') or item.get('shortname') or ticker
-                    exch = item.get('exchDisp', '')
-                    results.append({
-                        'ticker': ticker.replace('.JK', ''),
-                        'real_ticker': ticker,
-                        'name': name,
-                        'exchange': exch
-                    })
-            return jsonify(results)
-        return jsonify([])
+        return jsonify(results[:6])
     except Exception as e:
         print("Search error:", e)
         return jsonify([])

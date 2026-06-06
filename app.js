@@ -347,23 +347,29 @@ async function renderSmartWatchlist() {
                 const changeClass = isPos ? 'positive' : 'negative';
                 const changeStr = (isPos ? '+' : '') + data.change + '%';
                 
-                html += `
-                    <tr>
-                        <td class="ticker-cell" onclick="updateTradingView('${ticker}')" style="cursor:pointer;" title="Klik untuk lihat chart">${data.ticker}</td>
-                        <td style="font-size: 14px; color: var(--text-muted);">${data.name || '-'}</td>
-                        <td style="font-weight:600; color:${isPos ? '#10b981' : 'var(--danger)'};">${formatVal(data.current_price)}</td>
-                        <td><span class="badge ${changeClass}">${changeStr}</span></td>
-                        <td style="color:var(--text-muted)">${data.volume}</td>
-                        <td><button class="action-btn" onclick="removeSW('${ticker}')" style="background:rgba(239,68,68,0.1); color:var(--danger)">Hapus</button></td>
-                    </tr>
-                `;
+        swTableBody.innerHTML += `
+            <tr onclick="updateTradingView('${ticker}')" style="cursor:pointer;" class="mobile-row">
+                <td data-label="Ticker" class="ticker-cell">
+                    <div class="stock-logo">${ticker.charAt(0)}</div>
+                    <div class="ticker-info">
+                        <div class="ticker-code">${data.ticker}</div>
+                        <div class="ticker-name-mobile">${data.name || '-'}</div>
+                    </div>
+                </td>
+                <td data-label="Nama" class="desktop-name" style="font-size: 14px; color: var(--text-muted);">${data.name || '-'}</td>
+                <td data-label="Harga" class="price-cell" style="font-weight:600; color:${isPos ? '#10b981' : 'var(--danger)'};">${formatVal(data.current_price)}</td>
+                <td data-label="Perubahan" class="change-cell"><span class="badge ${changeClass}">${changeStr}</span></td>
+                <td data-label="Volume" class="volume-cell" style="color:var(--text-muted)">${data.volume}</td>
+                <td data-label="Aksi" class="action-cell"><button class="action-btn" onclick="event.stopPropagation(); removeSW('${ticker}')" style="background:rgba(239,68,68,0.1); color:var(--danger)"><span class="material-symbols-outlined" style="font-size: 18px;">delete</span></button></td>
+            </tr>
+        `;
             }
         } catch(e) {
             console.error(e);
         }
     }
     
-    tbody.innerHTML = html || '<tr><td colspan="6" style="text-align:center;">Data kosong</td></tr>';
+    if (swTableBody.innerHTML === '') swTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Data kosong</td></tr>';
 }
 
 function initSmartWatchlist() {
@@ -446,25 +452,109 @@ window.updateTradingView = function(ticker) {
     const bgColor = isLight ? '#ffffff' : '#020617';
     const gridColor = isLight ? '#f1f5f9' : '#0f172a';
 
-    document.getElementById('tv-chart-container').innerHTML = '';
-    new TradingView.widget({
-        "autosize": true,
-        "symbol": symbol,
-        "interval": "D",
-        "timezone": "Asia/Jakarta",
-        "theme": tvTheme,
-        "style": "1",
-        "locale": "id",
-        "enable_publishing": false,
-        "backgroundColor": bgColor,
-        "gridColor": gridColor,
-        "hide_top_toolbar": false,
-        "hide_legend": false,
-        "save_image": false,
-        "container_id": "tv-chart-container"
-    });
+    const isMobile = window.innerWidth <= 768;
+
+    if (isMobile) {
+        document.getElementById('mobile-chart-title').innerText = `Chart: ${symbol}`;
+        document.getElementById('mobile-chart-modal').style.display = 'flex';
+        renderMobileChart(ticker, isLight, bgColor);
+    } else {
+        document.getElementById('tv-chart-container').innerHTML = '';
+        new TradingView.widget({
+            "autosize": true,
+            "symbol": symbol,
+            "interval": "D",
+            "timezone": "Asia/Jakarta",
+            "theme": tvTheme,
+            "style": "1",
+            "locale": "id",
+            "enable_publishing": false,
+            "backgroundColor": bgColor,
+            "gridColor": gridColor,
+            "hide_top_toolbar": false,
+            "hide_legend": false,
+            "hide_side_toolbar": false,
+            "save_image": false,
+            "container_id": "tv-chart-container"
+        });
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+}
+
+let lwChart = null;
+let lwSeries = null;
+let lwInterval = null;
+
+async function renderMobileChart(ticker, isLight, bgColor) {
+    const container = document.getElementById('mobile-tv-chart-container');
+    container.innerHTML = '<div style="display:flex; justify-content:center; align-items:center; height:100%; color:var(--text-muted);">Memuat grafik khusus HP...</div>';
     
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    if (lwChart) {
+        lwChart.remove();
+        lwChart = null;
+    }
+    if (lwInterval) clearInterval(lwInterval);
+    
+    try {
+        const res = await fetch(`${API_BASE}/history?ticker=${ticker}`);
+        if (!res.ok) throw new Error("Gagal mengambil data historis");
+        const data = await res.json();
+        
+        if (data.error) throw new Error(data.error);
+        if (data.length === 0) throw new Error("Data kosong");
+        
+        container.innerHTML = '';
+        
+        const chartOptions = {
+            layout: {
+                textColor: isLight ? '#334155' : '#cbd5e1',
+                background: { type: 'solid', color: bgColor }
+            },
+            grid: {
+                vertLines: { color: isLight ? '#f1f5f9' : '#1e293b' },
+                horzLines: { color: isLight ? '#f1f5f9' : '#1e293b' },
+            },
+            timeScale: {
+                timeVisible: true,
+                secondsVisible: false,
+            }
+        };
+        
+        lwChart = LightweightCharts.createChart(container, chartOptions);
+        lwSeries = lwChart.addCandlestickSeries({
+            upColor: '#22c55e',
+            downColor: '#ef4444',
+            borderVisible: false,
+            wickUpColor: '#22c55e',
+            wickDownColor: '#ef4444'
+        });
+        
+        lwSeries.setData(data);
+        lwChart.timeScale().fitContent();
+        
+        // Polling for real-time updates every 1 minute
+        lwInterval = setInterval(async () => {
+            try {
+                const pRes = await fetch(`${API_BASE}/price?ticker=${ticker}`);
+                const pData = await pRes.json();
+                if(pData && !pData.error && pData.price) {
+                    const lastCandle = data[data.length - 1];
+                    const currentTime = Math.floor(Date.now() / 1000);
+                    // update latest candle close
+                    lwSeries.update({
+                        time: lastCandle.time,
+                        open: lastCandle.open,
+                        high: Math.max(lastCandle.high, pData.price),
+                        low: Math.min(lastCandle.low, pData.price),
+                        close: pData.price
+                    });
+                }
+            } catch (e) {}
+        }, 60000);
+        
+    } catch (err) {
+        container.innerHTML = `<div style="display:flex; justify-content:center; align-items:center; height:100%; color:#ef4444; padding: 20px; text-align: center;">Error: ${err.message}<br><br>Yahoo Finance mungkin memblokir server. Gunakan versi PC untuk akses TradingView asli.</div>`;
+    }
 }
 
 // Screener Logic (Real-time from Backend)
@@ -496,16 +586,22 @@ function renderScreenerTable(data) {
         const changeStr = (isPos ? '+' : '') + stock.change + '%';
         const priceStr = stock.ticker.length === 4 ? formatCurrency(stock.price) : `$${stock.price.toFixed(2)}`;
         
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-            <td class="ticker-cell" onclick="updateTradingView('${stock.ticker}')" style="cursor:pointer;" title="Lihat Chart">${stock.ticker}</td>
-            <td>${stock.name}</td>
-            <td style="font-weight:bold; color:${isPos ? '#10b981' : 'var(--danger)'};">${priceStr}</td>
-            <td><span class="badge ${changeClass}">${changeStr}</span></td>
-            <td>${stock.volume.toLocaleString()}</td>
-            <td><button class="action-btn" onclick="addToWatchlist('${stock.ticker}')" style="background:rgba(59,130,246,0.1); color:var(--primary); font-weight:600; padding:4px 8px; border-radius:4px;">+ Watchlist</button></td>
+        tbody.innerHTML += `
+        <tr onclick="updateTradingView('${stock.ticker}')" style="cursor:pointer;" class="mobile-row">
+            <td data-label="Ticker" class="ticker-cell">
+                <div class="stock-logo">${stock.ticker.charAt(0)}</div>
+                <div class="ticker-info">
+                    <div class="ticker-code">${stock.ticker}</div>
+                    <div class="ticker-name-mobile">${stock.name}</div>
+                </div>
+            </td>
+            <td data-label="Nama" class="desktop-name">${stock.name}</td>
+            <td data-label="Harga" class="price-cell" style="font-weight:bold; color:${isPos ? '#10b981' : 'var(--danger)'};">${priceStr}</td>
+            <td data-label="Perubahan" class="change-cell"><span class="badge ${changeClass}">${changeStr}</span></td>
+            <td data-label="Volume" class="volume-cell">${stock.volume.toLocaleString()}</td>
+            <td data-label="Aksi" class="action-cell"><button class="action-btn" onclick="event.stopPropagation(); addToWatchlist('${stock.ticker}')" style="background:rgba(59,130,246,0.1); color:var(--primary); font-weight:600; padding:6px; border-radius:8px;"><span class="material-symbols-outlined" style="font-size: 18px;">add</span></button></td>
+        </tr>
         `;
-        tbody.appendChild(tr);
     });
 }
 

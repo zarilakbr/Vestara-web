@@ -57,13 +57,15 @@ body {
     color: var(--text-main);
     overflow: hidden;
     transition: background-color 0.3s ease, color 0.3s ease;
+    width: 100%;
 }
 
 /* Layout */
 .app-container {
     display: flex;
     height: 100vh;
-    width: 100vw;
+    width: 100%;
+    overflow-x: hidden;
 }
 
 /* Sidebar */
@@ -501,10 +503,15 @@ body {
     opacity: 1;
 }
 
+.stock-logo, .ticker-name-mobile {
+    display: none;
+}
+
 /* Mobile Responsive Overrides */
 @media (max-width: 768px) {
     .app-container {
         flex-direction: column;
+        height: auto !important;
     }
     
     body {
@@ -615,23 +622,36 @@ body {
     }
     /* Main Content Spacing */
     .main-content {
-        padding: 16px;
+        padding: 12px;
         padding-bottom: 16px;
+        height: auto !important;
+        overflow-y: visible !important;
+        width: 100%;
+    }
+    #content-area {
+        height: auto !important;
+        overflow-y: visible !important;
+    }
+    .panel {
+        height: auto !important;
+        overflow-y: visible !important;
+        padding: 0 !important; /* Biarkan main-content yang mengatur padding */
     }
     .top-header {
-        flex-direction: column;
-        align-items: stretch;
-        gap: 12px;
-        padding: 16px;
-        height: auto;
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 16px !important;
+        padding: 16px !important;
+        height: auto !important;
+        min-height: max-content !important;
     }
     .search-bar {
         width: 100%;
     }
     .header-actions {
-        flex-direction: column;
-        width: 100%;
-        gap: 8px !important;
+        flex-direction: column !important;
+        width: 100% !important;
+        gap: 12px !important;
         align-items: stretch !important;
     }
     .market-clock {
@@ -663,6 +683,133 @@ body {
     }
     .valuation-results {
         grid-template-columns: 1fr;
+    }
+    
+    /* Sembunyikan tv-card di mobile (diganti modal) */
+    .tv-card {
+        display: none !important;
+    }
+    
+    #btn-show-ihsg-chart {
+        display: flex !important;
+    }
+    
+    /* Responsive Data Table */
+    .data-table,
+    .data-table tbody {
+        display: block;
+        width: 100%;
+        overflow-x: hidden;
+    }
+    .data-table thead {
+        display: none;
+    }
+    .data-table tbody tr {
+        display: grid;
+        grid-template-columns: 85px 85px 60px 32px; /* Ganti 1fr menjadi ukuran statis */
+        grid-template-areas: "ticker price change action";
+        justify-content: start; /* Mengelompokkan semua grid ke arah kiri layar */
+        gap: 6px; 
+        align-items: center;
+        padding: 16px 12px;
+        background: transparent;
+        border: none;
+        border-bottom: 1px solid #1e293b;
+        border-radius: 0;
+        box-shadow: none;
+        margin: 0;
+    }
+    .data-table tbody tr:last-child {
+        border-bottom: none;
+    }
+    .data-table td {
+        display: flex;
+        align-items: center;
+        padding: 0;
+        border: none;
+        width: 100%; /* Grid akan mengatur lebarnya */
+    }
+    .data-table td::before {
+        display: none !important;
+    }
+    
+    /* 1. Ticker Cell (Kiri: Logo + Info) */
+    .data-table td:nth-child(1) {
+        grid-area: ticker;
+        justify-content: flex-start;
+    }
+    .stock-logo {
+        display: flex !important;
+        justify-content: center;
+        align-items: center;
+        width: 32px;
+        height: 32px;
+        background: #1e293b;
+        color: #94a3b8;
+        border-radius: 50%;
+        margin-right: 6px;
+        font-size: 14px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    .ticker-info {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+    }
+    .ticker-code {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-main);
+    }
+    .ticker-name-mobile {
+        display: none !important; /* Hapus nama perusahaan agar ringkas */
+    }
+    
+    /* 2. Desktop Name */
+    .data-table td:nth-child(2) { display: none !important; }
+    
+    /* 3. Price (Dengan Pembatas Kiri) */
+    .data-table td:nth-child(3) {
+        grid-area: price;
+        justify-content: flex-start;
+        font-size: 14px;
+        font-weight: 700;
+        color: var(--text-main) !important;
+        border-left: 2px solid rgba(255,255,255,0.1);
+        padding-left: 6px;
+    }
+    
+    /* 4. Change (Persentase P/L dipindah sebelum Action) */
+    .data-table td:nth-child(4) {
+        grid-area: change;
+        justify-content: flex-start; /* Taruh badge di kiri sel grid agar menempel dengan harga */
+        font-size: 12px;
+    }
+    .data-table td:nth-child(4) .badge {
+        padding: 4px 6px;
+        border-radius: 4px;
+        /* Biarkan selebar kontennya saja */
+    }
+    
+    /* 6. Action (Tombol Tambah dipindah ke belakang Change) */
+    .data-table td:nth-child(6) {
+        grid-area: action;
+        justify-content: flex-start; /* Merapat ke persentase */
+    }
+    .data-table td:nth-child(6) button {
+        padding: 4px;
+        border-radius: 6px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    /* 5. Volume (Disembunyikan Sesuai Permintaan) */
+    .data-table td:nth-child(5) { 
+        display: none !important; 
     }
     
     /* Forms */
@@ -1083,4 +1230,35 @@ body.light-theme .disclaimer-box p {
 body.light-theme .disclaimer-box .disclaimer-footer {
     color: #b91c1c; /* Darker bold red */
     border-top-color: rgba(239, 68, 68, 0.4);
+}
+
+/* Extra Small Mobile Optimizations */
+@media (max-width: 480px) {
+    #login-overlay .card {
+        padding: 24px !important;
+    }
+    .page-title {
+        font-size: 20px;
+    }
+    h2 {
+        font-size: 18px !important;
+    }
+    h3 {
+        font-size: 16px !important;
+    }
+    .card {
+        padding: 16px;
+    }
+    .card-header {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px;
+    }
+    .tv-card {
+        height: 350px !important;
+    }
+    .badge {
+        font-size: 10px;
+        padding: 4px 6px;
+    }
 }
