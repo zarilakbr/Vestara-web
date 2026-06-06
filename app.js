@@ -49,34 +49,59 @@ function setupAutocomplete(inputId, callback) {
         }
         
         debounceTimer = setTimeout(async () => {
+            const showCustom = () => {
+                suggestionsBox.innerHTML = '';
+                const div = document.createElement('div');
+                div.className = 'suggestion-item';
+                div.innerHTML = `<strong>${q.toUpperCase()}</strong> - Cari Saham Eksternal`;
+                div.onclick = () => {
+                    input.value = q.toUpperCase();
+                    suggestionsBox.style.display = 'none';
+                    if(callback) callback(q.toUpperCase());
+                };
+                suggestionsBox.appendChild(div);
+                suggestionsBox.style.display = 'block';
+            };
+
             try {
                 const res = await fetch(`${API_BASE}/search?q=${q}`);
                 const data = await res.json();
                 
-                if(data.length > 0) {
+                if(data && data.length > 0) {
                     suggestionsBox.innerHTML = '';
                     data.forEach(item => {
                         const div = document.createElement('div');
                         div.className = 'suggestion-item';
-                        div.innerHTML = `
-                            <span class="suggestion-name">${item.name}</span>
-                            <span class="suggestion-ticker">${item.ticker}</span>
-                        `;
-                        div.addEventListener('click', () => {
+                        div.innerHTML = `<strong>${item.ticker}</strong> - ${item.name}`;
+                        div.onclick = () => {
                             input.value = item.ticker;
                             suggestionsBox.style.display = 'none';
                             if(callback) callback(item.ticker);
-                        });
+                        };
                         suggestionsBox.appendChild(div);
                     });
-                    suggestionsBox.style.display = 'flex';
+                    suggestionsBox.style.display = 'block';
                 } else {
-                    suggestionsBox.style.display = 'none';
+                    showCustom();
                 }
             } catch(e) {
-                console.error(e);
+                showCustom();
             }
-        }, 300);
+        }, 150);
+    });
+
+    input.addEventListener('keypress', (e) => {
+        if(e.key === 'Enter') {
+            e.preventDefault();
+            const first = suggestionsBox.querySelector('.suggestion-item');
+            if(suggestionsBox.style.display === 'block' && first) {
+                first.click();
+            } else {
+                let val = input.value.trim().toUpperCase();
+                if(callback) callback(val);
+                suggestionsBox.style.display = 'none';
+            }
+        }
     });
 
     document.addEventListener('click', (e) => {
@@ -132,15 +157,33 @@ document.addEventListener('DOMContentLoaded', () => {
                     const data = await res.json();
                     if(data.success) {
                         localStorage.setItem('investools_token', data.token);
-                        document.getElementById('login-overlay').style.display = 'none';
-                        showToast('Login Berhasil!', 'success');
-                        initializeApp();
+                        
+                        // Ubah tombol jadi status sukses loading
+                        btnLogin.innerText = "Login Sukses! Memuat Workspace...";
+                        btnLogin.style.backgroundColor = "#10b981";
+                        btnLogin.style.borderColor = "#10b981";
+                        btnLogin.style.color = "#fff";
+                        
+                        // Delay 1.5 detik untuk animasi loading semu
+                        setTimeout(() => {
+                            const overlay = document.getElementById('login-overlay');
+                            overlay.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                            overlay.style.opacity = '0';
+                            overlay.style.transform = 'scale(1.05)';
+                            
+                            setTimeout(() => {
+                                overlay.style.display = 'none';
+                                showToast('Selamat datang kembali di Vestara!', 'success');
+                                initializeApp();
+                            }, 500);
+                        }, 1500);
+                        
                     } else {
                         showToast(data.message, 'error');
+                        btnLogin.innerText = "Login & Akses Platform";
                     }
                 } catch(e) {
                     showToast('Gagal terhubung ke server', 'error');
-                } finally {
                     btnLogin.innerText = "Login & Akses Platform";
                 }
             });
@@ -233,12 +276,13 @@ function initializeApp() {
             // Reload TradingView with new theme
             const tvContainer = document.getElementById('tv-chart-container');
             const currentTicker = tvContainer ? (tvContainer.getAttribute('data-current-ticker') || 'IDX:COMPOSITE') : 'IDX:COMPOSITE';
-            updateTradingView(currentTicker);
+    updateTradingView(currentTicker);
             
             showToast(`Berganti ke ${isLight ? 'Light Mode' : 'Dark Mode'}`, 'info');
         });
     }
-    setupAutocomplete('screener-search', async (ticker) => {
+    
+    const addScreenerTicker = async (ticker) => {
         try {
             showToast(`Menarik data ${ticker}...`, 'info');
             const res = await fetch(`${API_BASE}/price?ticker=${ticker}`);
@@ -263,7 +307,23 @@ function initializeApp() {
         } catch(e) {
             showToast('Gagal menarik data saham tersebut', 'error');
         }
-    });
+    };
+
+    setupAutocomplete('screener-search', addScreenerTicker);
+    
+    // Support tekan "Enter" / "Search" di keyboard HP
+    const screenerSearchInput = document.getElementById('screener-search');
+    if(screenerSearchInput) {
+        screenerSearchInput.addEventListener('keypress', (e) => {
+            if(e.key === 'Enter') {
+                let val = screenerSearchInput.value.trim().toUpperCase();
+                if(val) {
+                    if(val.length === 4 && !val.includes('.')) val += '.JK';
+                    addScreenerTicker(val);
+                }
+            }
+        });
+    }
 }
 
 // Navigation Logic
@@ -347,7 +407,7 @@ async function renderSmartWatchlist() {
                 const changeClass = isPos ? 'positive' : 'negative';
                 const changeStr = (isPos ? '+' : '') + data.change + '%';
                 
-        swTableBody.innerHTML += `
+        html += `
             <tr onclick="updateTradingView('${ticker}')" style="cursor:pointer;" class="mobile-row">
                 <td data-label="Ticker" class="ticker-cell">
                     <div class="stock-logo">${ticker.charAt(0)}</div>
@@ -369,7 +429,8 @@ async function renderSmartWatchlist() {
         }
     }
     
-    if (swTableBody.innerHTML === '') swTableBody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Data kosong</td></tr>';
+    tbody.innerHTML = html;
+    if (tbody.innerHTML === '') tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">Data kosong</td></tr>';
 }
 
 function initSmartWatchlist() {
@@ -380,8 +441,12 @@ function initSmartWatchlist() {
     const btn = document.getElementById('btn-add-sw');
     
     const addAction = () => {
-        const val = input.value.trim().toUpperCase();
+        let val = input.value.trim().toUpperCase();
         if(val) {
+            // Auto append .JK untuk saham Indonesia jika hanya 4 huruf
+            if(val.length === 4 && !val.includes('.')) {
+                val += '.JK';
+            }
             if(!smartWatchlist.includes(val)) {
                 smartWatchlist.push(val);
                 renderSmartWatchlist();
@@ -609,6 +674,7 @@ function initScreener() {
     document.getElementById('screener-body').innerHTML = '<tr><td colspan="6" style="text-align:center">Memuat Live Data dari Yahoo Finance...</td></tr>';
     
     const filterSelect = document.getElementById('screener-filter');
+    const searchInput = document.getElementById('screener-search');
     const getCurrentSector = () => filterSelect ? filterSelect.value : 'Semua Sektor';
     
     fetchScreenerData(getCurrentSector());
@@ -618,6 +684,21 @@ function initScreener() {
             document.getElementById('screener-body').innerHTML = '<tr><td colspan="6" style="text-align:center">Memfilter sektor...</td></tr>';
             fetchScreenerData(getCurrentSector());
             showToast(`Menampilkan sektor: ${getCurrentSector()}`, 'info');
+        });
+    }
+    
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+            const q = e.target.value.toLowerCase().trim();
+            if (!q) {
+                renderScreenerTable(screenerData);
+                return;
+            }
+            const filtered = screenerData.filter(s => 
+                s.ticker.toLowerCase().includes(q) || 
+                (s.name && s.name.toLowerCase().includes(q))
+            );
+            renderScreenerTable(filtered);
         });
     }
 
@@ -631,11 +712,13 @@ function initValuation() {
     
     if(btnFetch) {
         btnFetch.addEventListener('click', async () => {
-            const ticker = document.getElementById('val-ticker').value.trim().toUpperCase();
+            let ticker = document.getElementById('val-ticker').value.trim().toUpperCase();
             if(!ticker) {
                 showToast('Masukkan kode saham untuk ditarik harganya!', 'error');
                 return;
             }
+            if(ticker.length === 4 && !ticker.includes('.')) ticker += '.JK';
+            
             btnFetch.innerText = "...";
             try {
                 const response = await fetch(`${API_BASE}/price?ticker=${ticker}`);
@@ -714,8 +797,9 @@ function initPrediction() {
     const btn = document.getElementById('btn-predict');
     
     btn.addEventListener('click', async () => {
-        const ticker = document.getElementById('pred-ticker').value.trim().toUpperCase();
+        let ticker = document.getElementById('pred-ticker').value.trim().toUpperCase();
         if(!ticker) return;
+        if(ticker.length === 4 && !ticker.includes('.')) ticker += '.JK';
         btn.innerText = "Menganalisis...";
         btn.disabled = true;
         
@@ -725,7 +809,7 @@ function initPrediction() {
             const data = await response.json();
             if(data.error) throw new Error(data.error);
             
-            const isIDR = ticker.length === 4;
+            const isIDR = data.ticker.length === 4;
             const formatVal = (val) => isIDR ? formatCurrency(val) : `$${val.toFixed(2)}`;
             
             const techGrid = document.getElementById('tech-results');
@@ -751,6 +835,11 @@ function initPrediction() {
                 rsiText = "KEMURAHAN (Oversold)";
                 rsiExplanation = "Peluang. Orang-orang sudah terlalu banyak menjual ketakutan. Harga berpotensi besar untuk mantul naik.";
             }
+            
+            let predDiff = ((data.prediction_1m - data.current_price) / data.current_price) * 100;
+            let predColor = predDiff >= 0 ? '#10b981' : 'var(--danger)';
+            let predIcon = predDiff >= 0 ? 'trending_up' : 'trending_down';
+            let predText = predDiff >= 0 ? 'Naik' : 'Turun';
 
             techGrid.innerHTML = `
                 <div class="card result-card" style="border-left: 4px solid ${smaColor}">
@@ -775,6 +864,17 @@ function initPrediction() {
                 <div class="card result-card" style="background: ${signalBg}; border: 1px solid ${signalColor}; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items:center;">
                     <h3 style="color: var(--text-muted); font-size: 14px; margin-bottom: 8px;">Saran Keputusan Otomatis</h3>
                     <h1 style="font-size: 32px; color: ${signalColor}; margin-bottom: 8px;">${data.signal}</h1>
+                    
+                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px dashed ${signalColor}; width: 100%;">
+                        <h3 style="color: var(--text-muted); font-size: 12px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 1px;">Proyeksi 1 Bulan Ke Depan</h3>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <span class="material-symbols-outlined" style="color: ${predColor};">${predIcon}</span>
+                            <h2 style="font-size: 24px; color: var(--text-main); margin: 0;">${formatVal(data.prediction_1m)}</h2>
+                        </div>
+                        <p style="font-size: 14px; color: ${predColor}; font-weight: 600; margin-top: 4px;">
+                            Potensi ${predText} ${Math.abs(predDiff).toFixed(2)}%
+                        </p>
+                    </div>
                 </div>
             `;
             

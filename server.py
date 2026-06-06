@@ -231,14 +231,23 @@ def get_technical():
         elif sma_status == "BEARISH" and rsi_status == "NEUTRAL":
             signal = "SELL"
 
+        # 1-Month Prediction (20 Trading Days) based on Historical Drift
+        returns = closes_s.pct_change().dropna()
+        avg_daily_return = returns.mean()
+        if pd.isna(avg_daily_return): avg_daily_return = 0
+        
+        # Projecting 20 trading days forward
+        prediction_1m = float(current_price * ((1 + avg_daily_return) ** 20))
+
         return jsonify({
             'ticker': ticker_symbol.replace('.JK', ''),
-            'current_price': current_price,
-            'sma_20': sma_20,
+            'current_price': float(current_price),
+            'sma_20': float(sma_20),
             'sma_status': sma_status,
-            'rsi_14': round(rsi_14, 2),
+            'rsi_14': float(round(rsi_14, 2)),
             'rsi_status': rsi_status,
-            'signal': signal
+            'signal': signal,
+            'prediction_1m': prediction_1m
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -272,31 +281,54 @@ def get_ihsg():
             'change': 0.5 + (random.random() * 0.1)
         })
 
+search_cache = {}
+
 @app.route('/api/search', methods=['GET'])
 def search_stock():
-    q = request.args.get('q', '').strip().upper()
+    q = request.args.get('q', '').strip()
     if len(q) < 2:
         return jsonify([])
     
-    try:
-        results = []
-        for stock in STOCKS_DB:
-            ticker_no_jk = stock['ticker'].replace('.JK', '')
-            if q in ticker_no_jk or q in stock['sector'].upper():
-                results.append({
-                    'ticker': ticker_no_jk,
-                    'name': stock['sector'] + ' Sector',
-                    'exchange': 'IDX'
-                })
+    q_lower = q.lower()
+    if q_lower in search_cache:
+        return jsonify(search_cache[q_lower])
         
-        # Jika hasil lokal kurang, kita bisa fallback ke hardcoded populer
-        if not results and q == 'GOTO':
-            results.append({'ticker': 'GOTO', 'name': 'GoTo Gojek Tokopedia', 'exchange': 'IDX'})
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        url = f"https://query2.finance.yahoo.com/v1/finance/search?q={q}&quotesCount=6&newsCount=0"
+        res = requests.get(url, headers=headers, timeout=3)
+        data = res.json()
+        
+        results = []
+        if 'quotes' in data:
+            for quote in data['quotes']:
+                # Filter hanya instrumen saham/ETF
+                if quote.get('quoteType') in ['EQUITY', 'ETF', 'MUTUALFUND']:
+                    ticker = quote.get('symbol', '')
+                    name = quote.get('longname', quote.get('shortname', ''))
+                    
+                    if ticker.endswith('.JK'):
+                        results.append({
+                            'ticker': ticker.replace('.JK', ''),
+                            'name': name,
+                            'exchange': quote.get('exchDisp', 'IDX')
+                        })
+                    else:
+                        results.append({
+                            'ticker': ticker,
+                            'name': name,
+                            'exchange': quote.get('exchDisp', '')
+                        })
+                        
+        # Jika hasil kosong, kembalikan input user
+        if not results:
+            results.append({'ticker': q.upper(), 'name': 'Pencarian Eksternal', 'exchange': ''})
             
+        search_cache[q_lower] = results[:6]
         return jsonify(results[:6])
     except Exception as e:
         print("Search error:", e)
-        return jsonify([])
+        return jsonify([{'ticker': q.upper(), 'name': 'Pencarian Eksternal', 'exchange': ''}])
 
 @app.route('/api/login', methods=['POST'])
 def login():
