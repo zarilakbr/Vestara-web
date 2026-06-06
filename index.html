@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vestara - Premium Stock Analyzer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" href="logo.png" type="image/png">
+</head>
+<body>
+    <!-- Login Overlay -->
+    <div id="login-overlay" style="display: flex; position: fixed; inset: 0; background: rgba(15, 23, 42, 0.95); z-index: 99999; justify-content: center; align-items: center; backdrop-filter: blur(15px);">
+        <div class="card" style="width: 100%; max-width: 400px; padding: 40px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);">
+            <div style="text-align: center; margin-bottom: 24px;">
+                <img src="logo.png" alt="Vestara Logo" style="width: 64px; height: 64px; border-radius: 12px; margin-bottom: 16px; box-shadow: 0 0 20px rgba(212, 175, 55, 0.3);">
+                <h2>Selamat Datang di Vestara</h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-top: 8px; line-height: 1.5;">Platform Analisis Kuantitatif & Valuasi Eksklusif.<br>Silakan masuk untuk mengakses alat bantu premium Anda.</p>
+            </div>
+            
+            <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="login-username" placeholder="Masukkan username">
+            </div>
+            <div class="form-group" style="margin-top: 16px;">
+                <label>Password</label>
+                <input type="password" id="login-password" placeholder="Masukkan password">
+            </div>
+            
+            <button class="btn-primary" id="btn-login" style="width: 100%; margin-top: 24px; padding: 12px; font-size: 16px;">Login & Akses Platform</button>
+        </div>
+    </div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar" style="display: flex; flex-direction: column;">
+            <div class="sidebar-header" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                <div class="logo">
+                    <img src="logo.png" alt="Vestara Logo" style="width: 32px; height: 32px; object-fit: contain; border-radius: 8px; box-shadow: 0 0 10px rgba(212, 175, 55, 0.5);">
+                    <span style="font-weight: 800; letter-spacing: 0.5px;">Vestara</span>
+                </div>
+                
+                <button class="mobile-menu-toggle" id="mobile-menu-btn" style="display: none; background: none; border: none; color: var(--text-main); cursor: pointer; padding: 8px;">
+                    <span class="material-symbols-outlined" style="font-size: 28px;">menu</span>
+                </button>
+            </div>
+            
+            <div class="sidebar-content" id="sidebar-content" style="flex: 1; display: flex; flex-direction: column; width: 100%;">
+                <nav class="nav-menu" style="flex: 1;">
+                    <a href="#" class="nav-item active" data-target="dashboard">
+                        <span class="material-symbols-outlined">dashboard</span> Dashboard
+                    </a>
+                    <a href="#" class="nav-item" data-target="screener">
+                        <span class="material-symbols-outlined">table_chart</span> Live Screener
+                    </a>
+                    <a href="#" class="nav-item" data-target="valuation">
+                        <span class="material-symbols-outlined">calculate</span> Kalkulator Valuasi
+                    </a>
+                    <a href="#" class="nav-item" data-target="prediction">
+                        <span class="material-symbols-outlined">online_prediction</span> Sinyal Teknikal
+                    </a>
+                    <a href="#" class="nav-item" data-target="about">
+                        <span class="material-symbols-outlined">info</span> Tentang
+                    </a>
+                </nav>
+                
+                <div class="sidebar-actions" id="sidebar-actions" style="margin-top: auto; display: flex; flex-direction: column; gap: 8px;">
+                    <button id="btn-theme-toggle" class="nav-item" style="background:none; border:none; color:var(--text-main); width:100%; justify-content:flex-start; margin:0; cursor:pointer;">
+                        <span class="material-symbols-outlined" id="theme-icon">light_mode</span> Tema Layar
+                    </button>
+                    <button id="btn-logout" class="nav-item" style="color: #ef4444; border: 1px solid rgba(239,68,68,0.3); background: rgba(239,68,68,0.1); justify-content: center; width: 100%; margin:0; cursor:pointer;">
+                        <span class="material-symbols-outlined">logout</span> Keluar
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="search-bar">
+                    <span class="material-symbols-outlined">search</span>
+                    <input type="text" id="global-search" placeholder="Cari emiten, berita, atau materi edukasi...">
+                </div>
+                <div class="header-actions" style="display: flex; gap: 16px; align-items: center;">
+                    <div class="market-clock" id="market-clock" style="font-size: 14px; color: var(--text-muted); display: flex; align-items: center; gap: 6px; padding-right: 16px; border-right: 1px solid var(--border);">
+                        <span class="material-symbols-outlined" style="font-size: 18px;">schedule</span>
+                        <span id="clock-wib" style="font-weight: 500; letter-spacing: 1px;">00:00:00 WIB</span>
+                        <span id="market-badge" style="margin-left: 8px; padding: 4px 8px; font-size: 10px; border-radius: 4px; font-weight: bold; transition: all 0.3s;">TUTUP</span>
+                    </div>
+                    <div class="market-status">
+                        <span class="status-dot"></span>
+                        <span>IHSG: <strong id="ihsg-value">Memuat...</strong> <span id="ihsg-change" style="font-size: 12px; margin-left: 4px; font-weight: bold;"></span></span>
+                    </div>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                <!-- Dashboard Panel -->
+                <section id="dashboard" class="panel active">
+                    <h1 class="page-title">Market Overview</h1>
+                    <div class="dashboard-grid" style="grid-template-columns: 1fr;">
+                        <div class="card stat-card" style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div class="stat-header" style="margin-bottom: 8px;">
+                                    <h3>IHSG (Indeks Harga Saham Gabungan)</h3>
+                                </div>
+                                <h2 id="ihsg-value-card" style="font-size: 28px; color: var(--primary);">Memuat...</h2>
+                                <p style="font-size: 14px; margin-top: 4px; display:flex; align-items:center; gap:8px;">
+                                    <span id="ihsg-change-card" class="badge positive" style="font-size:12px;">+0.0%</span> 
+                                    <span style="color: var(--text-muted);">dari hari sebelumnya</span>
+                                </p>
+                            </div>
+                    </div>
+                    
+                    <div class="command-center-grid" style="display: grid; grid-template-columns: 1fr; gap: 24px; margin-top: 24px;">
+                        <!-- TradingView Widget -->
+                        <div class="card tv-card" style="padding: 0; overflow: hidden; height: 500px;">
+                            <div id="tv-chart-container" style="height: 100%; width: 100%;"></div>
+                        </div>
+
+                        <!-- Smart Watchlist -->
+                        <div class="card watchlist-card">
+                            <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                                <h3>Smart Watchlist & Kalkulator Harga Wajar</h3>
+                                <div class="form-group inline" style="margin-bottom: 0; display: flex; gap: 10px;">
+                                    <input type="text" id="sw-input" placeholder="Ketik kode saham (ex: BBCA, AAPL)" style="padding: 10px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-dark); color: white; width: 220px;">
+                                    <button class="btn-primary" id="btn-add-sw" style="padding: 10px 20px; width: auto; margin: 0;">Tambah Pantauan</button>
+                                </div>
+                            </div>
+                            <div class="table-container" style="max-height: 400px; overflow-y: auto;">
+                                <table class="data-table">
+                                    <thead style="position: sticky; top: 0; background: var(--bg-panel); z-index: 1;">
+                                        <tr>
+                                            <th>Kode Saham</th>
+                                            <th>Nama Perusahaan</th>
+                                            <th>Harga Saat Ini</th>
+                                            <th>Perubahan (%)</th>
+                                            <th>Volume</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="sw-body">
+                                        <!-- Diisi oleh JS -->
+                                        <tr><td colspan="6" style="text-align:center;">Memuat Data Pantauan...</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Screener Panel -->
+                <section id="screener" class="panel">
+                    <h1 class="page-title">Live Screener</h1>
+                    <div class="card">
+                        <div class="screener-controls" style="display: flex; gap: 16px;">
+                            <div class="form-group inline" style="margin-bottom: 0; flex: 1;">
+                                <input type="text" id="screener-search" placeholder="Cari saham di luar daftar (ex: BBCA)" style="width: 100%; padding: 8px 16px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-dark); color: white;">
+                            </div>
+                            <select id="screener-filter" style="padding: 8px 16px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-dark); color: white; width: 200px;">
+                                <option value="Semua Sektor">Semua Sektor</option>
+                                <option value="Energi">Energi</option>
+                                <option value="Keuangan">Keuangan</option>
+                                <option value="Konsumer">Konsumer</option>
+                                <option value="Teknologi">Teknologi</option>
+                                <option value="Infrastruktur">Infrastruktur</option>
+                            </select>
+                        </div>
+                        <div class="table-container">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Kode Saham</th>
+                                        <th>Nama Perusahaan</th>
+                                        <th>Harga Terakhir</th>
+                                        <th>Perubahan</th>
+                                        <th>Volume</th>
+                                        <th>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="screener-body">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Valuation Panel -->
+                <section id="valuation" class="panel">
+                    <h1 class="page-title">Kalkulator Valuasi (Harga Wajar)</h1>
+                    <div class="valuation-grid">
+                        <div class="card input-card">
+                            <h3>Masukkan Data Keuangan</h3>
+                            
+                            <div class="form-group inline" style="margin-bottom: 16px;">
+                                <input type="text" id="val-ticker" placeholder="Tarik harga otomatis (ex: BBCA)" style="width: 70%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-dark); color: white;">
+                                <button class="btn-primary" id="btn-fetch-price" style="width: 30%; padding: 12px;">Cari Harga</button>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>Harga Saat Ini (Rp / $)</label>
+                                <input type="number" id="val-price" placeholder="Contoh: 10000" step="any">
+                            </div>
+                            <div class="form-group">
+                                <label>EPS (Laba per Lembar Saham)</label>
+                                <input type="number" id="val-eps" placeholder="Contoh: 400" step="any">
+                            </div>
+                            <div class="form-group">
+                                <label>BVPS (Nilai Buku per Lembar Saham)</label>
+                                <input type="number" id="val-bvps" placeholder="Contoh: 2000" step="any">
+                            </div>
+                            <div class="form-group">
+                                <label>Estimasi Pertumbuhan / Growth (%)</label>
+                                <input type="number" id="val-growth" placeholder="Contoh: 8" step="any">
+                            </div>
+                            
+                            <button class="btn-primary" id="btn-calculate" style="margin-top: 10px;">Hitung Valuasi</button>
+                        </div>
+                        
+                        <div class="valuation-results">
+                            <div class="card result-card">
+                                <h4>Harga Wajar Berdasarkan Aset (Metode Graham)</h4>
+                                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Metode paling aman bagi pemula. Menilai apakah saham sedang "Diskon" berdasarkan kekayaan pasti perusahaan saat ini.</p>
+                                <div class="price-display">
+                                    <span style="font-size: 14px; color: var(--text-muted);">Target Harga:</span>
+                                    <h2 id="res-graham" style="color: var(--primary); font-size: 28px; margin: 8px 0;">Rp 0</h2>
+                                    <span class="status-badge" id="status-graham">Belum Dihitung</span>
+                                </div>
+                            </div>
+                            
+                            <div class="card result-card">
+                                <h4>Harga Wajar Berdasarkan Masa Depan (Metode DCF)</h4>
+                                <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px;">Memperhitungkan seberapa pesat perusahaan akan bertumbuh di masa depan. Cocok untuk menilai saham teknologi atau bisnis potensial.</p>
+                                <div class="price-display">
+                                    <span style="font-size: 14px; color: var(--text-muted);">Target Harga:</span>
+                                    <h2 id="res-dcf" style="color: var(--primary); font-size: 28px; margin: 8px 0;">Rp 0</h2>
+                                    <span class="status-badge" id="status-dcf">Belum Dihitung</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Prediction Panel (Now Technical) -->
+                <section id="prediction" class="panel">
+                    <h1 class="page-title">Sinyal Teknikal Profesional</h1>
+                    <div class="prediction-container">
+                        <div class="card selector-card">
+                            <h3 style="margin-bottom: 16px;">Cari Saham untuk Dianalisis</h3>
+                            <div class="form-group inline" style="margin-bottom: 0;">
+                                <input type="text" id="pred-ticker" placeholder="Ketik nama atau kode saham (ex: BBCA)" style="width: 70%; padding: 12px; border-radius: var(--radius-md); border: 1px solid var(--border); background: var(--bg-dark); color: white;">
+                                <button class="btn-primary" id="btn-predict" style="width: 30%; padding: 12px;">Analisis Otomatis</button>
+                            </div>
+                        </div>
+                        
+                        <div class="technical-grid" id="tech-results" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 24px;">
+                            <div class="card" style="grid-column: 1 / -1; text-align: center; color: var(--text-muted);">
+                                Silakan masukkan ticker dan klik "Analisis Otomatis" untuk melihat sinyal teknikal.
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- About Panel -->
+                <section id="about" class="panel">
+                    <h1 class="page-title">Tentang Vestara</h1>
+                    <div class="card" style="line-height: 1.6; font-size: 16px; color: var(--text-main);">
+                        <h2 style="color: var(--primary); margin-bottom: 16px; font-size: 20px;">Platform Analisis & Valuasi</h2>
+                        <p style="margin-bottom: 16px;">Vestara adalah platform canggih untuk analisis kuantitatif dan teknikal bursa saham. Dirancang khusus untuk mempermudah akses investor ke dalam data <em>real-time</em> maupun riwayat fundamental. Semua metrik yang disajikan dihitung secara independen menggunakan algoritma standar industri keuangan.</p>
+                        <p style="margin-bottom: 0;">Kami berkomitmen untuk terus menghadirkan perangkat analisis yang objektif, modern, dan sangat cepat untuk menunjang aktivitas bursa Anda setiap hari.</p>
+
+                        <div class="disclaimer-box">
+                            <h3>
+                                <span class="material-symbols-outlined" style="font-size: 24px;">warning</span> PERINGATAN TEGAS & DISCLAIMER HUKUM
+                            </h3>
+                            <p>
+                                <strong>SELURUH KEPUTUSAN FINANSIAL ADA DI TANGAN ANDA.</strong> Perdagangan saham dan aset finansial adalah aktivitas berisiko ekstrim (*High Risk*) yang dapat mengakibatkan hilangnya sebagian atau <strong>SELURUH modal Anda dalam sekejap</strong>.
+                            </p>
+                            <p>
+                                Semua angka valuasi, harga wajar, maupun sinyal "BULLISH/BEARISH" yang disajikan di platform Vestara <strong>MURNI merupakan hasil kalkulasi robot algoritma otomatis</strong>. Sistem ini adalah sarana pendukung edukasi, <strong>BUKAN saran penasihat keuangan berlisensi</strong>. Kami <strong>TIDAK PERNAH</strong> memberikan rekomendasi, instruksi, atau ajakan untuk membeli dan menjual saham apa pun.
+                            </p>
+                            <p class="disclaimer-footer">
+                                DENGAN MENGGUNAKAN PLATFORM INI, ANDA SEPAKAT SECARA HUKUM UNTUK MEMBEBASKAN PENGEMBANG VESTARA DARI SEGALA TUNTUTAN GANTI RUGI MATERIIL MAUPUN IMMATERIIL AKIBAT KEPUTUSAN JUAL-BELI ANDA!
+                            </p>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    
+    <!-- Toast Popup Container -->
+    <div id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>
